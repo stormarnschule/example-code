@@ -2,63 +2,53 @@
 #include <gpio.h>    // gpio pin controlling
 #include <pcd8544.h> // controlling the lcd (phillips 8544)
 // operating system
-#include <signal.h>  // ctrl-c handler
-#include <unistd.h>  // general os structs
+#include <signal.h> // ctrl-c handler
+#include <unistd.h> // general os structs
 // output
-#include <iostream>  // std::cout
+#include <iostream> // std::cout
 // game logic
-#include <chrono>    // timing the game
-#include <random>    // used for spawning food
-#include <vector>    // snake is a vector of points
+#include <chrono> // timing the game
+#include <random> // used for spawning food
+#include <vector> // snake is a vector of points
 
-const auto Scale = 2,
-           SnakeLength = 5,
-           FoodSpawnInterval = 30;
+const auto Scale = 2, SnakeLength = 5, FoodSpawnInterval = 30;
 
-const auto TopMargin = 8,
-           Width = (pcd8544::width - 2) / Scale,
+const auto TopMargin = 8, Width = (pcd8544::width - 2) / Scale,
            Height = (pcd8544::height - 2 - TopMargin) / Scale;
 
 const auto UpdateInterval = std::chrono::milliseconds(200);
 
-uintmax_t Tick = 0,
-          Score = 0;
+uintmax_t Tick = 0, Score = 0;
 
 volatile bool running = true;
 
-
 // buttons
-auto button_left = gpio::button_pin(24),
-     button_right = gpio::button_pin(25);
+auto button_left = gpio::button_pin(24), button_right = gpio::button_pin(25);
 
 bool is_button_pressed = false;
 
-
 // types
-enum class direction
-{
-    up,
-    right,
-    down,
-    left
-};
+enum class direction { up, right, down, left };
 
 std::string to_string(const direction& d)
 {
-    switch(d) {
-        case direction::up: return "up";
-        case direction::right: return "right";
-        case direction::down: return "down";
-        case direction::left: return "left";
-        default: return "";
+    switch (d) {
+    case direction::up:
+        return "up";
+    case direction::right:
+        return "right";
+    case direction::down:
+        return "down";
+    case direction::left:
+        return "left";
+    default:
+        return "";
     }
 }
 
-struct point
-{
+struct point {
     int x, y;
 };
-
 
 // ctr-c handler
 void my_handler(int s)
@@ -78,10 +68,9 @@ void setup_handler()
     sigaction(SIGINT, &sigIntHandler, NULL);
 }
 
-
 // main game functions
-void init(), tick(pcd8544& lcd), render(pcd8544& lcd); // main game loop
-void input(), move(); // game update logic
+void init(), tick(pcd8544 &lcd), render(pcd8544 &lcd); // main game loop
+void input(), move();                                  // game update logic
 
 int main()
 {
@@ -126,7 +115,6 @@ void tick(pcd8544& lcd)
     }
 }
 
-
 // game logic variables
 std::vector<point> snake = {};
 point food;
@@ -143,7 +131,8 @@ void init()
 
 std::default_random_engine::result_type rnd()
 {
-    static auto s_rnd = std::default_random_engine(std::chrono::system_clock::now().time_since_epoch().count());
+    static auto s_rnd
+        = std::default_random_engine(std::chrono::system_clock::now().time_since_epoch().count());
     return s_rnd();
 }
 
@@ -202,9 +191,9 @@ void move_segment(point& p, bool back = false)
 void input()
 {
     auto oldDirection = dir;
-    
+
     if (is_button_pressed == false) {
-        // left button    
+        // left button
         if (button_left.state()) {
             switch (dir) {
             case direction::left:
@@ -221,7 +210,7 @@ void input()
                 break;
             }
         }
-    
+
         // right button
         else if (button_right.state()) {
             switch (dir) {
@@ -239,17 +228,18 @@ void input()
                 break;
             }
         }
-        
+
         // no button
         else {
             return;
         }
-        
-        std::cout << "changed dir from " << to_string(oldDirection) << " to " << to_string(dir) << "\n";
+
+        std::cout << "changed dir from " << to_string(oldDirection) << " to " << to_string(dir)
+                  << "\n";
         is_button_pressed = true;
         std::cout << "is_button_pressed = " << is_button_pressed << "\n";
     }
-    
+
     // reset is_button_pressed
     if (!button_left.state() && !button_right.state()) {
         is_button_pressed = false;
@@ -300,14 +290,11 @@ void move()
     }
 }
 
-inline void draw_px(pcd8544& lcd, int x, int y)
-{
-    lcd.draw_pixel(x + 1, y + 1 + TopMargin, true);
-}
+inline void draw_px(pcd8544& lcd, int x, int y) { lcd.draw_pixel(x + 1, y + 1 + TopMargin, true); }
 
 void draw_header(pcd8544& lcd)
 {
-    static const std::vector<std::vector<uint8_t> > text_bitmap = {
+    static const std::vector<std::vector<uint8_t>> text_bitmap = {
         { 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1 },
         { 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0 },
         { 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1 },
@@ -315,66 +302,26 @@ void draw_header(pcd8544& lcd)
         { 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1 }
     };
 
-    static const std::vector<std::vector<uint8_t> > digits = {
-        { 1, 1, 1, 1 },
-        { 1, 0, 0, 1 },
-        { 1, 0, 0, 1 },
-        { 1, 0, 0, 1 },
-        { 1, 1, 1, 1 },
+    static const std::vector<std::vector<uint8_t>> digits = {
+        { 1, 1, 1, 1 }, { 1, 0, 0, 1 }, { 1, 0, 0, 1 }, { 1, 0, 0, 1 }, { 1, 1, 1, 1 },
 
-        { 0, 0, 0, 1 },
-        { 0, 0, 0, 1 },
-        { 0, 0, 0, 1 },
-        { 0, 0, 0, 1 },
-        { 0, 0, 0, 1 },
+        { 0, 0, 0, 1 }, { 0, 0, 0, 1 }, { 0, 0, 0, 1 }, { 0, 0, 0, 1 }, { 0, 0, 0, 1 },
 
-        { 1, 1, 1, 1 },
-        { 0, 0, 0, 1 },
-        { 1, 1, 1, 1 },
-        { 1, 0, 0, 0 },
-        { 1, 1, 1, 1 },
+        { 1, 1, 1, 1 }, { 0, 0, 0, 1 }, { 1, 1, 1, 1 }, { 1, 0, 0, 0 }, { 1, 1, 1, 1 },
 
-        { 1, 1, 1, 1 },
-        { 0, 0, 0, 1 },
-        { 1, 1, 1, 1 },
-        { 0, 0, 0, 1 },
-        { 1, 1, 1, 1 },
+        { 1, 1, 1, 1 }, { 0, 0, 0, 1 }, { 1, 1, 1, 1 }, { 0, 0, 0, 1 }, { 1, 1, 1, 1 },
 
-        { 1, 0, 0, 1 },
-        { 1, 0, 0, 1 },
-        { 1, 1, 1, 1 },
-        { 0, 0, 0, 1 },
-        { 0, 0, 0, 1 },
+        { 1, 0, 0, 1 }, { 1, 0, 0, 1 }, { 1, 1, 1, 1 }, { 0, 0, 0, 1 }, { 0, 0, 0, 1 },
 
-        { 1, 1, 1, 1 },
-        { 1, 0, 0, 0 },
-        { 1, 1, 1, 1 },
-        { 0, 0, 0, 1 },
-        { 1, 1, 1, 1 },
+        { 1, 1, 1, 1 }, { 1, 0, 0, 0 }, { 1, 1, 1, 1 }, { 0, 0, 0, 1 }, { 1, 1, 1, 1 },
 
-        { 1, 1, 1, 1 },
-        { 1, 0, 0, 0 },
-        { 1, 1, 1, 1 },
-        { 1, 0, 0, 1 },
-        { 1, 1, 1, 1 },
+        { 1, 1, 1, 1 }, { 1, 0, 0, 0 }, { 1, 1, 1, 1 }, { 1, 0, 0, 1 }, { 1, 1, 1, 1 },
 
-        { 1, 1, 1, 1 },
-        { 0, 0, 0, 1 },
-        { 0, 0, 0, 1 },
-        { 0, 0, 0, 1 },
-        { 0, 0, 0, 1 },
+        { 1, 1, 1, 1 }, { 0, 0, 0, 1 }, { 0, 0, 0, 1 }, { 0, 0, 0, 1 }, { 0, 0, 0, 1 },
 
-        { 1, 1, 1, 1 },
-        { 1, 0, 0, 1 },
-        { 1, 1, 1, 1 },
-        { 1, 0, 0, 1 },
-        { 1, 1, 1, 1 },
+        { 1, 1, 1, 1 }, { 1, 0, 0, 1 }, { 1, 1, 1, 1 }, { 1, 0, 0, 1 }, { 1, 1, 1, 1 },
 
-        { 1, 1, 1, 1 },
-        { 1, 0, 0, 1 },
-        { 1, 1, 1, 1 },
-        { 0, 0, 0, 1 },
-        { 1, 1, 1, 1 },
+        { 1, 1, 1, 1 }, { 1, 0, 0, 1 }, { 1, 1, 1, 1 }, { 0, 0, 0, 1 }, { 1, 1, 1, 1 },
     };
 
     for (size_t y = 0; y < text_bitmap.size(); y++) {
