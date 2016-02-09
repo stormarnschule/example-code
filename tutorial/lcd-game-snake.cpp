@@ -149,7 +149,7 @@ std::default_random_engine::result_type rnd()
 
 point rnd_point()
 {
-    auto x = rnd() % Width, y = rnd() % Height;
+    int x = rnd() % Width, y = rnd() % Height;
     return { x, y };
 }
 
